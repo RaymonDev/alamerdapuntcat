@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="ca" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador d'Exàmens · Serveis de Telecomunicació</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* Variables Modo Oscuro (Default) */
+            --bg-body: #09090b;
+            --bg-card: #18181b;
+            --bg-card-hover: #27272a;
+            --border-color: #27272a;
+            --border-active: #3f3f46;
+            --text-primary: #e4e4e7;
+            --text-secondary: #a1a1aa;
+            --accent: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.15);
+            --btn-primary-bg: #e4e4e7;
+            --btn-primary-text: #09090b;
+            --font-sans: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        /* Variables Modo Claro */
+        html.light {
+            --bg-body: #f4f4f5;
+            --bg-card: #ffffff;
+            --bg-card-hover: #f4f4f5;
+            --border-color: #e4e4e7;
+            --border-active: #d4d4d8;
+            --text-primary: #18181b;
+            --text-secondary: #71717a;
+            --accent: #2563eb;
+            --accent-glow: rgba(37, 99, 235, 0.1);
+            --btn-primary-bg: #18181b;
+            --btn-primary-text: #ffffff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            min-height: 100vh;
+            overflow-x: hidden;
+            line-height: 1.6;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Technical Grid Background */
+        .bg-grid {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: 
+                linear-gradient(var(--border-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border-color) 1px, transparent 1px);
+            background-size: 40px 40px;
+            opacity: 0.4;
+            z-index: -1;
+            mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+            -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+            pointer-events: none;
+        }
+
+        /* Layout */
+        .layout {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: sticky;
+            top: 40px;
+            height: fit-content;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+            position: relative;
+        }
+
+        .brand-icon {
+            width: 42px; height: 42px;
+            background: var(--accent);
+            border-radius: 10px;
+            display: grid;
+            place-items: center;
+            color: white;
+            font-weight: bold;
+            font-family: var(--font-mono);
+            box-shadow: 0 0 20px var(--accent-glow);
+            font-size: 1.2rem;
+        }
+
+        .brand-text h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
+        .brand-text p { font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px; }
+
+        .control-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 24px;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+        .theme-toggle:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+
+        .control-group label {
+            display: block;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+
+        select, input[type="number"] {
+            width: 100%;
+            background: var(--bg-body);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 12px;
+            border-radius: 8px;
+            font-family: var(--font-sans);
+            outline: none;
+            transition: border-color 0.2s;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        select:focus, input[type="number"]:focus { border-color: var(--accent); }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background: var(--btn-primary-bg);
+            color: var(--btn-primary-text);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+        .btn-secondary:hover {
+            border-color: var(--text-secondary);
+            color: var(--text-primary);
+            background: var(--bg-body);
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: auto;
+            padding-top: 20px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-align: center;
+            font-family: var(--font-mono);
+        }
+        .footer a { color: var(--text-primary); text-decoration: none; border-bottom: 1px dotted var(--text-secondary); transition: 0.2s; }
+        .footer a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+        
+        @keyframes heartbeat {
+            0% { transform: scale(1); }
+            25% { transform: scale(1.2); }
+            40% { transform: scale(1); }
+            60% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        .heart-icon {
+            display: inline-block;
+            color: #ef4444;
+            animation: heartbeat 1.5s infinite;
+            margin: 0 2px;
+        }
+
+        /* Main Content */
+        .exam-paper {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .paper-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 10px;
+        }
+
+        .paper-title h2 { font-size: 1.8rem; font-weight: 700; letter-spacing: -0.03em; color: var(--text-primary); }
+        .paper-meta { font-family: var(--font-mono); color: var(--text-secondary); font-size: 0.9rem; }
+
+        .question-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.3s ease;
+            animation: slideUp 0.4s ease-out forwards;
+            opacity: 0;
+        }
+
+        .question-card:hover {
+            border-color: var(--border-active);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            transform: translateY(-2px);
+        }
+
+        .q-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            font-size: 0.8rem;
+            font-family: var(--font-mono);
+            color: var(--text-secondary);
+        }
+        
+        .q-tag {
+            background: var(--accent-glow);
+            color: var(--accent);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .q-text {
+            font-size: 1.05rem;
+            line-height: 1.7;
+            font-weight: 400;
+            color: var(--text-primary);
+        }
+
+        .session-distribution {
+            margin-top: 40px;
+            padding: 24px;
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px dashed var(--border-color);
+        }
+        .session-distribution h3 { margin-bottom: 16px; font-size: 1rem; color: var(--text-secondary); }
+
+        /* Alerta de Sesiones Faltantes */
+        .alert {
+            padding: 14px;
+            border-radius: 12px;
+            background: rgba(245, 158, 11, 0.1);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            font-size: 0.85rem;
+            margin-top: 20px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            line-height: 1.5;
+            animation: fadeIn 0.5s ease;
+        }
+        .alert svg { min-width: 18px; margin-top: 2px; }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Mobile */
+        @media (max-width: 850px) {
+            .layout { grid-template-columns: 1fr; padding: 20px; gap: 30px; }
+            .sidebar { position: relative; top: 0; }
+            .brand-text h1 { font-size: 1.5rem; }
+            .theme-toggle { position: relative; margin-left: auto; }
+            .brand { width: 100%; justify-content: space-between; }
+            .brand-left { display: flex; gap: 12px; align-items: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-grid"></div>
+
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-left" style="display:flex; align-items:center; gap:12px;">
+                    <div class="brand-icon">ST</div>
+                    <div class="brand-text">
+                        <h1 id="app-title">Generador d'Exàmens</h1>
+                        <p id="app-subtitle">Serveis de Telecomunicació</p>
+                    </div>
+                </div>
+                <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+                    <svg id="icon-sun" class="hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                    <svg id="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                </button>
+            </div>
+
+            <div class="control-card">
+                <div class="control-group">
+                    <label id="lbl-lang">Idioma</label>
+                    <select id="language-select">
+                        <option value="catalan">Català</option>
+                        <option value="spanish">Castellano</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label id="lbl-order">Ordre</label>
+                    <select id="order-select">
+                        <option value="random" id="opt-random">Aleatori</option>
+                        <option value="sequential" id="opt-seq">Seqüencial</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label id="lbl-num">Nombre de preguntes</label>
+                    <input type="number" id="num-questions" value="12" min="1" max="100">
+                </div>
+
+                <button id="generate-btn" class="btn btn-primary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+                    <span id="btn-gen-text">Generar Examen</span>
+                </button>
+
+                <button id="download-pdf-btn" class="btn btn-secondary" disabled>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span id="btn-pdf-text">Exportar PDF</span>
+                </button>
+            </div>
+
+            <div id="alerts-container"></div>
+
+            <div class="footer">
+                Made with <span class="heart-icon">❤</span> by <a href="https://distortedsignal.com" target="_blank">Raymon</a>
+            </div>
+        </aside>
+
+        <main id="exam-container" class="exam-paper">
+            <div style="text-align: center; padding: 100px 0; color: var(--text-secondary); display:flex; flex-direction:column; align-items:center;">
+                <svg style="width: 64px; height: 64px; margin-bottom: 20px; opacity: 0.3;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                <p id="placeholder-text">Selecciona idioma i prem "Generar Examen" per començar.</p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // === UI TEXTS ===
+        const UI_TEXTS = {
+            catalan: {
+                appTitle: "Generador d'Exàmens",
+                appSubtitle: "Serveis de Telecomunicació",
+                lblLang: "Idioma",
+                lblOrder: "Ordre",
+                lblNum: "Nombre de preguntes",
+                optRandom: "Aleatori",
+                optSeq: "Seqüencial",
+                btnGen: "Generar Examen",
+                btnRegen: "Regenerar Examen",
+                btnPdf: "Exportar PDF",
+                placeholder: "Selecciona idioma i prem 'Generar Examen' per començar.",
+                examTitle: "Parcial 2",
+                sessionLbl: "Sessió",
+                distTitle: "Distribució de preguntes",
+                alertMissing: "Dades pendents per les sessions:"
+            },
+            spanish: {
+                appTitle: "Generador de Exámenes",
+                appSubtitle: "Servicios de Telecomunicación",
+                lblLang: "Idioma",
+                lblOrder: "Orden",
+                lblNum: "Número de preguntas",
+                optRandom: "Aleatorio",
+                optSeq: "Secuencial",
+                btnGen: "Generar Examen",
+                btnRegen: "Regenerar Examen",
+                btnPdf: "Exportar PDF",
+                placeholder: "Selecciona idioma y pulsa 'Generar Examen' para empezar.",
+                examTitle: "Parcial 2",
+                sessionLbl: "Sesión",
+                distTitle: "Distribución de preguntas",
+                alertMissing: "Datos pendientes para las sesiones:"
+            }
+        };
+
+        // === DATA SOURCE ===
+        const SESSIONS_DATA = {
+          "07": {"session":"07","topic":"Serveis (1) - Correu electrònic i HTTP","questions":{"catalan":["1. Llisteu i expliqueu breument per a què s'usen els 5 estàndards (3 protocols i 2 formats d'informació) relacionats amb el correu electrònic.","2. Quin és el protocol per a l'enviament de missatges de correu electrònic.","3. Quin protocol de transport i ports utilitza SMTP?","4. Quins protocols caldrà que l'equip utilitzi abans de poder enviar un missatge amb SMTP?","5. Amb quin tipus de dades es codifiquen les comandes i la informació a SMTP?","6. Expliqueu breument el format que tenen les ordres (\"comandes\") SMTP.","7. Expliqueu breument el format que tenen les respostes SMTP.","8. Expliqueu breument les fases del protocol SMTP.","9. Expliqueu breument el format de les adreces de correu electrònic.","10. Quin format (estàndard) segueixen els missatges que s'envien amb SMTP? Expliqueu-lo breument.","11. Quins desavantatges té aquest format? Com s'han solucionat aquests desavantatges?","12. Expliqueu breument el mecanisme de codificació que permet enviar un missatge de correu electrònic amb accents amb seguretat que no hi haurà problemes encara que passi per xarxes que només accepten dades de 7 bits.","13. Expliqueu breument el mecanisme de codificació que permet enviar un missatge de correu electrònic amb una imatge amb seguretat que no hi haurà problemes encara que passi per xarxes que només accepten dades de 7 bits.","14. Expliqueu breument el mecanisme de codificació que permet enviar molts fitxers en un únic missatge de correu electrònic.","15. Fins a quin equip arriben els missatges enviats utilitzant SMTP?","16. Quins són els 2 protocols per a l'accés a bústies de correu?","17. Quins protocols de transport i ports utilitzen aquests protocols d'accés a bústies de correu?","18. Expliqueu molt breument les característiques generals del protocol POP3.","19. Expliqueu breument les fases del protocol POP3.","20. Expliqueu molt breument les característiques generals del protocol IMAPv4.","21. Expliqueu breument les diferències principals que hi ha entre els 2 protocols per a l'accés a bústies de correu.","22. Expliqueu breument l'ús dels protocols vistos en aquesta sessió en el cas del correu web (webmail).","23. Expliqueu breument què és la WWW (World Wide Web).","24. Expliqueu breument en quins 3 estàndards es basa la WWW.","25. Quina és la diferència entre URI i URL?","26. Quin és el format genèric d'un identificador URI?","27. Per a què serveix el protocol HTTP? I HTTPS?","28. Quin protocol de transport i ports utilitza HTTP? I HTTPS?","29. Què vol dir que HTTP és un protocol \"sense estat\"?","30. Expliqueu breument el format general de les peticions HTTP, incloent-hi les seves 3 parts i l'estructura interna d'aquestes.","31. Llisteu i expliqueu breument els mètodes HTTP més usuals.","32. Expliqueu molt breument els 2 mecanismes per enviar informació tipus formulari que suporta HTTP.","33. Expliqueu breument en què es diferencia el format general de les respostes HTTP respecte a les peticions HTTP.","34. Expliqueu molt breument què és i què proporciona HTML.","35. Expliqueu molt breument la funcionalitat i la relació entre SGML, HTML, XML i XHTML."],"spanish":["1. Listad y explicad brevemente para qué se usan los 5 estándares (3 protocolos y 2 formatos de información) relacionados con el correo electrónico.","2. Cuál es el protocolo para el envío de mensajes de correo electrónico.","3. ¿Qué protocolo de transporte y puertos utiliza SMTP?","4. ¿Qué protocolos necesitará utilizar el equipo antes de poder enviar un mensaje con SMTP?","5. ¿Con qué tipo de datos se codifican los comandos y la información en SMTP?","6. Explicad brevemente el formato que tienen las órdenes (\"comandos\") SMTP.","7. Explicad brevemente el formato que tienen las respuestas SMTP.","8. Explicad brevemente las fases del protocolo SMTP.","9. Explicad brevemente el formato de las direcciones de correo electrónico.","10. ¿Qué formato (estándar) siguen los mensajes que se envían con SMTP? Explicadlo brevemente.","11. ¿Qué desventajas tiene este formato? ¿Cómo se han solucionado estas desventajas?","12. Explicad brevemente el mecanismo de codificación que permite enviar un mensaje de correo electrónico con acentos con seguridad de que no habrá problemas aunque pase por redes que solo aceptan datos de 7 bits.","13. Explicad brevemente el mecanismo de codificación que permite enviar un mensaje de correo electrónico con una imagen con seguridad de que no habrá problemas aunque pase por redes que solo aceptan datos de 7 bits.","14. Explicad brevemente el mecanismo de codificación que permite enviar muchos ficheros en un único mensaje de correo electrónico.","15. ¿Hasta qué equipo llegan los mensajes enviados utilizando SMTP?","16. ¿Cuáles son los 2 protocolos para el acceso a buzones de correo?","17. ¿Qué protocolos de transporte y puertos utilizan estos protocolos de acceso a buzones de correo?","18. Explicad muy brevemente las características generales del protocolo POP3.","19. Explicad brevemente las fases del protocolo POP3.","20. Explicad muy brevemente las características generales del protocolo IMAPv4.","21. Explicad brevemente las diferencias principales que hay entre los 2 protocolos para el acceso a buzones de correo.","22. Explicad brevemente el uso de los protocolos vistos en esta sesión en el caso del correo web (webmail).","23. Explicad brevemente qué es la WWW (World Wide Web).","24. Explicad brevemente en qué 3 estándares se basa la WWW.","25. ¿Cuál es la diferencia entre URI y URL?","26. ¿Cuál es el formato genérico de un identificador URI?","27. ¿Para qué sirve el protocolo HTTP? ¿Y HTTPS?","28. ¿Qué protocolo de transporte y puertos utiliza HTTP? ¿Y HTTPS?","29. ¿Qué quiere decir que HTTP es un protocolo \"sin estado\"?","30. Explicad brevemente el formato general de las peticiones HTTP, incluyendo sus 3 partes y la estructura interna de estas.","31. Listad y explicad brevemente los métodos HTTP más usuales.","32. Explicad muy brevemente los 2 mecanismos para enviar información tipo formulario que soporta HTTP.","33. Explicad brevemente en qué se diferencia el formato general de las respuestas HTTP respecto a las peticiones HTTP.","34. Explicad muy brevemente qué es y qué proporciona HTML.","35. Explicad muy brevemente la funcionalidad y la relación entre SGML, HTML, XML y XHTML."]}},
+          "08": {"session":"08","topic":"Serveis (2) - HTTP Avançat, CDN i RTP","questions":{"catalan":["1. Expliqueu breument les versions d'HTTP existents.","2. Què vol dir que HTTP suporta connexions persistents i també no persistents, incloent la diferència entre ambdós tipus de connexió? Quin és el tipus per defecte a HTTP 1.0 i a HTTP 1.1?","3. Expliqueu breument com funciona el mecanisme de connexions persistents utilitzat a HTTP, i els camps que cal utilitzar.","4. Expliqueu molt breument el mecanisme d'HTTP pipelining.","5. Com es pot solucionar (almenys de manera parcial) el problema que HTTP sigui un protocol sense estat? Expliqueu breument aquest mecanisme.","6. Expliqueu breument què és i què fa un Web cache (proxy server).","7. Expliqueu breument per a què serveix el mecanisme de GET condicional.","8. Quina és la diferencia entre HTTP i HTTPS? Com s'aconsegueix?","9. Expliqueu breument què és SSL, en quin lloc de la torre de comunicacions es troba, i la relació amb HTTP.","10. Expliqueu breument què és HTML5","11. Expliqueu breument les principals diferències entre HTML5 i HTML.","12. Expliqueu breument què és i les característiques principals del protocol HTTP/2.","13. Expliqueu breument el mecanisme de Multiplexing d'HTTP/2 i compareu-lo amb els mecanismes suportats per HTTP/1.0 i HTTP/1.1.","14. Expliqueu breument el mecanisme de Server Push d'HTTP/2, i compareu-lo amb els mecanismes suportats per HTTP/1.0 i HTTP/2 sense Server push.","15. Expliqueu breument què és i les característiques principals del protocol QUIC.","16. Expliqueu breument què és i les característiques principals d'HTML5.","17. Compareu breument HTML i HTML5.","18. Expliqueu breument què són i les característiques principals dels WebSockets.","19. Expliqueu molt breument què és WebRTC (Web Real-Time Communication).","20. Compareu molt breument els WebSockets vs WebRT.","21. Expliqueu breument quin problema solucionen les Xarxes de distribució de contingut.","22. Expliqueu breument les 2 opcions, amb les subopcions si n'hi ha, per situar el(s) servidor(s) per distribuir contingut als usuaris.","23. Expliqueu breument què és una Xarxa de distribució de contingut (CDN, Content Delivery Networks).","24. Llisteu i expliqueu breument els principals elements de l'arquitectura dels CDN.","25. Expliqueu breument la diferència entre Pull CDN i Push CDN.","26. Expliqueu breument el funcionament de les Xarxes de distribució de contingut (els 6 passos en el seu funcionament per trobar l'adreça IP del node de lliurament de contingut [delivery node]).","27. Expliqueu breument els Mecanismes d'accés, distribució i descàrrega de pel·lícules en el cas de Netflix, incloent-hi la relació de Netflix amb altres companyies.","28. Per a què serveix/cal el protocol RTP (Real Time Protocol)?","29. Tenint en compte la posició a la torre de comunicacions, quina és la funcionalitat que aporta i la \"filosofia\" de funcionament de RTP?","30. Quina és la utilitat dels números de seqüència i de les marques de temps (timestamps) a RTP?","31. Expliqueu breument per a què serveix el protocol RTCP (Real Time Control Protocol).","32. Expliqueu breument quina és la seva filosofia de funcionament de l'RTCP i els camps principals de la seva capçalera.","33. Expliqueu breument com suporta RTCP la sincronització de més d'1 flux/font de dades en una sessió RTP.","34. Expliqueu breument com gestiona RTCP l'enviament de paquets d'aquest protocol, per tal de no saturar la xarxa.","35. Llisteu les 3 limitacions principals del servei tant-com-puc (Best effort) d'IP.","36. Expliqueu molt breument la funcionalitat que proporciona el protocol RSVP (Resource Reservation Protocol). Recordeu-ne breument (tema 6.4) el funcionament i els tipus de missatge.","37. Expliqueu molt breument la funcionalitat que proporciona el protocol COPS (Common Open Policy Services).","38. Llisteu i expliqueu molt breument els 3 tipus d'aplicacions relacionades amb les xarxes multimèdia.","39. Expliqueu breument els 3 \"reptes\" (challenges) principals de la reproducció de vídeo en continu (video streaming).","40. Què és el Delay jitter? Expliqueu breument les 2 tecnologies que s'usen conjuntament per solucionar-lo a la reproducció en continu (streaming) de vídeo emmagatzemat."],"spanish":["1. Explicad brevemente las versiones de HTTP existentes.","2. ¿Qué quiere decir que HTTP soporta conexiones persistentes y también no persistentes, incluyendo la diferencia entre ambos tipos de conexión? ¿Cuál es el tipo por defecto en HTTP 1.0 y en HTTP 1.1?","3. Explicad brevemente cómo funciona el mecanismo de conexiones persistentes utilizado en HTTP, y los campos que hay que utilizar.","4. Explicad muy brevemente el mecanismo de HTTP pipelining.","5. ¿Cómo se puede solucionar (al menos de manera parcial) el problema de que HTTP sea un protocolo sin estado? Explicad brevemente este mecanismo.","6. Explicad brevemente qué es y qué hace un Web cache (proxy server).","7. Explicad brevemente para qué sirve el mecanismo de GET condicional.","8. ¿Cuál es la diferencia entre HTTP y HTTPS? ¿Cómo se consigue?","9. Explicad brevemente qué es SSL, en qué lugar de la torre de comunicaciones se encuentra, y la relación con HTTP.","10. Explicad brevemente qué es HTML5.","11. Explicad brevemente las principales diferencias entre HTML5 y HTML.","12. Explicad brevemente qué es y las características principales del protocolo HTTP/2.","13. Explicad brevemente el mecanismo de Multiplexing de HTTP/2 y comparadlo con los mecanismos soportados por HTTP/1.0 y HTTP/1.1.","14. Explicad brevemente el mecanismo de Server Push de HTTP/2, y comparadlo con los mecanismos soportados por HTTP/1.0 y HTTP/2 sin Server push.","15. Explicad brevemente qué es y las características principales del protocolo QUIC.","16. Explicad brevemente qué es y las características principales de HTML5.","17. Comparad brevemente HTML y HTML5.","18. Explicad brevemente qué son y las características principales de los WebSockets.","19. Explicad muy brevemente qué es WebRTC (Web Real-Time Communication).","20. Comparad muy brevemente los WebSockets vs WebRT.","21. Explicad brevemente qué problema solucionan las Redes de distribución de contenido.","22. Explicad brevemente las 2 opciones, con las subopciones si las hay, para situar el(los) servidor(es) para distribuir contenido a los usuarios.","23. Explicad brevemente qué es una Red de distribución de contenido (CDN, Content Delivery Networks).","24. Listad y explicad brevemente los principales elementos de la arquitectura de los CDN.","25. Explicad brevemente la diferencia entre Pull CDN y Push CDN.","26. Explicad brevemente el funcionamiento de las Redes de distribución de contenido (los 6 pasos en su funcionamiento para encontrar la dirección IP del nodo de entrega de contenido [delivery node]).","27. Explicad brevemente los Mecanismos de acceso, distribución y descarga de películas en el caso de Netflix, incluyendo la relación de Netflix con otras compañías.","28. ¿Para qué sirve/es necesario el protocolo RTP (Real Time Protocol)?","29. Teniendo en cuenta la posición en la torre de comunicaciones, ¿cuál es la funcionalidad que aporta y la \"filosofía\" de funcionamiento de RTP?","30. ¿Cuál es la utilidad de los números de secuencia y de las marcas de tiempo (timestamps) en RTP?","31. Explicad brevemente para qué sirve el protocolo RTCP (Real Time Control Protocol).","32. Explicad brevemente cuál es su filosofía de funcionamiento del RTCP y los campos principales de su cabecera.","33. Explicad brevemente cómo soporta RTCP la sincronización de más de 1 flujo/fuente de datos en una sesión RTP.","34. Explicad brevemente cómo gestiona RTCP el envío de paquetes de este protocolo, para no saturar la red.","35. Listad las 3 limitaciones principales del servicio \"best effort\" (tanto como pueda) de IP.","36. Explicad muy brevemente la funcionalidad que proporciona el protocolo RSVP (Resource Reservation Protocol). Recordad brevemente (tema 6.4) el funcionamiento y los tipos de mensaje.","37. Explicad muy brevemente la funcionalidad que proporciona el protocolo COPS (Common Open Policy Services).","38. Listad y explicad muy brevemente los 3 tipos de aplicaciones relacionadas con las redes multimedia.","39. Explicad brevemente los 3 \"retos\" (challenges) principales de la reproducción de vídeo en continuo (video streaming).","40. ¿Qué es el Delay jitter? Explicad brevemente las 2 tecnologías que se usan conjuntamente para solucionarlo en la reproducción en continuo (streaming) de vídeo almacenado."]}},
+          "09": {"session":"09","topic":"Serveis (3) - VoIP, SIP i Intranets","questions":{"catalan":["1. Expliqueu l'ús d'UDP per a la reproducció multimèdia en continu (multimedia streaming).","2. Expliqueu l'ús d'HTTP per a la reproducció multimèdia en temps real. Quins són els 3 buffers implicats en aquesta reproducció?","3. Expliqueu breument el mètode d'Adaptive bitrate streaming per a la reproducció multimèdia en continu.","4. Llisteu els 2 protocols que utilitzen Adaptive bitrate streaming i compareu-los breument.","5. Expliqueu breument les característiques d'RTSP (Real-Time Streaming Protocol) usat en la reproducció multimèdia en continu.","6. Expliqueu molt breument les característiques i la distribució de la reproducció d'àudio i vídeo en continu en temps real (streaming live audio and video).","7. Expliqueu breument què és i algunes característiques bàsiques de VoIP (Voice over IP, veu sobre IP).","8. Expliqueu breument el tipus de codificació, i quins paràmetres de mostreig, s'utilitzen a VoIP. Com podem reduir l'amplada de banda necessària en una connexió de dades d'àudio i o vídeo?","9. Expliqueu breument les característiques principals de la VoIP, incloent l'efecte dels retards a la xarxa.","10. Expliqueu breument el processament d'informació necessari a VoIP, tant a la part de l'emissor com a la part del receptor.","11. Expliqueu breument la pèrdua, pèrdua per retard i la tolerància a fallades en referència a la VoIP.","12. Recordeu i llisteu les 2 tecnologies que s'usen conjuntament per solucionar el Delay jitter, vistes per a la reproducció en continu (streaming) de vídeo emmagatzemat, i que també s'utilitzen pera VoIP.","13. Expliqueu breument com s'aconsegueix el \"retard d'emissió adaptatiu\" (adaptive playout delay).","14. Expliqueu breument els 3 mecanismes per intentar la recuperació sense haver de retransmetre en cas de pèrdua de paquets multimèdia.","15. Expliqueu breument què són i què proporcionen els protocols de senyalització (signalling) a VoIP. Llisteu el dos principals protocols de senyalització que coneixeu.","16. De forma molt genèrica, què proporciona el protocol SIP (Session Initiation Protocol)? Quin tipus de sintaxi usa per a les comandes?","17. A quin protocol s'assembla (tot i que no té res a veure) el protocol SIP?","18. Expliqueu breument els 3 tipus de serveis que proporciona SIP.","19. Expliqueu breument el format (sintaxi) dels missatges SIP, incloent la llista dels mètodes que implementa i una breu explicació dels principals.","20. Expliqueu breument el \"protocol\" SDP (Session Description Protocol), incloent la relació amb SIP.","21. Expliqueu breument com funciona el mecanisme de negociació de Còdecs amb SDP.","22. Quin protocol s'utilitza normalment per a la transmissió de la veu (media)? Recordeu sobre quin protocol de la capa de Transport s'utilitza aquest protocol.","23. Expliqueu breument la funció del SIP registrar.","24. Expliqueu breument què és un SIP proxy.","25. Expliqueu breument què proporciona el protocol H.323.","26. Comenteu molt breument els protocols de la torre de comunicació d'H.323 que hi ha a la transparència \"H.323 / Protocols\".","27. Feu una breu comparativa entre SIP i H.323.","28. Expliqueu breument el funcionament d'skype a nivell de components i protocol.","29. Expliqueu breument el funcionament de Discord.","30. Recordeu quines són les 4 parts d'una Aplicació i llisteu les 4 classes d'aplicacions Client/Servidor i per a cadascuna d'elles llisteu quines parts (de les 4 anteriors) hi ha a la part Client i quines a la part Servidor.","31. Expliqueu breument què és una Intranet i una extranet.","32. Expliqueu breument què és una arquitectura de 3 nivells (3-tier), i com s'aplicaria per una connectivitat Web/Base de dades, a partir de les 4 parts d'una aplicació vistes anteriorment.","33. Expliqueu breument què és SQL i què és una base de dades Relacional i una No Relacional (NoSQL).","34. Llisteu les ordres (commands) principals d'SQL, l'estructura de les peticions SQL, i algun exemple."],"spanish":["1. Explicad el uso de UDP para la reproducción multimedia en continuo (multimedia streaming).","2. Explicad el uso de HTTP para la reproducción multimedia en tiempo real. ¿Cuáles son los 3 buffers implicados en esta reproducción?","3. Explicad brevemente el método de Adaptive bitrate streaming para la reproducción multimedia en continuo.","4. Listad los 2 protocolos que utilizan Adaptive bitrate streaming y comparadlos brevemente.","5. Explicad brevemente las características de RTSP (Real-Time Streaming Protocol) usado en la reproducción multimedia en continuo.","6. Explicad muy brevemente las características y la distribución de la reproducción de audio y vídeo en continuo en tiempo real (streaming live audio and video).","7. Explicad brevemente qué es y algunas características básicas de VoIP (Voice over IP, voz sobre IP).","8. Explicad brevemente el tipo de codificación, y qué parámetros de muestreo, se utilizan en VoIP. ¿Cómo podemos reducir el ancho de banda necesario en una conexión de datos de audio y o vídeo?","9. Explicad brevemente las características principales de la VoIP, incluyendo el efecto de los retardos en la red.","10. Explicad brevemente el procesamiento de información necesario en VoIP, tanto en la parte del emisor como en la parte del receptor.","11. Explicad brevemente la pérdida, pérdida por retardo y la tolerancia a fallos en referencia a la VoIP.","12. Recordad y listad las 2 tecnologías que se usan conjuntamente para solucionar el Delay jitter, vistas para la reproducción en continuo (streaming) de vídeo almacenado, y que también se utilizan para VoIP.","13. Explicad brevemente cómo se consigue el \"retardo de emisión adaptativo\" (adaptive playout delay).","14. Explicad brevemente los 3 mecanismos para intentar la recuperación sin tener que retransmitir en caso de pérdida de paquetes multimedia.","15. Explicad brevemente qué son y qué proporcionan los protocolos de señalización (signalling) en VoIP. Listad los dos principales protocolos de señalización que conocéis.","16. De forma muy genérica, ¿qué proporciona el protocolo SIP (Session Initiation Protocol)? ¿Qué tipo de sintaxis usa para los comandos?","17. ¿A qué protocolo se parece (aunque no tiene nada que ver) el protocolo SIP?","18. Explicad brevemente los 3 tipos de servicios que proporciona SIP.","19. Explicad brevemente el formato (sintaxis) de los mensajes SIP, incluyendo la lista de los métodos que implementa y una breve explicación de los principales.","20. Explicad brevemente el \"protocolo\" SDP (Session Description Protocol), incluyendo la relación con SIP.","21. Explicad brevemente cómo funciona el mecanismo de negociación de Códecs con SDP.","22. ¿Qué protocolo se utiliza normalmente para la transmisión de la voz (media)? Recordad sobre qué protocolo de la capa de Transporte se utiliza este protocolo.","23. Explicad brevemente la función del SIP registrar.","24. Explicad brevemente qué es un SIP proxy.","25. Explicad brevemente qué proporciona el protocolo H.323.","26. Comentad muy brevemente los protocolos de la torre de comunicación de H.323 que hay en la transparencia \"H.323 / Protocols\".","27. Haced una breve comparativa entre SIP y H.323.","28. Explicad brevemente el funcionamiento de Skype a nivel de componentes y protocolo.","29. Explicad brevemente el funcionamiento de Discord.","30. Recordad cuáles son las 4 partes de una Aplicación y listad las 4 clases de aplicaciones Cliente/Servidor y para cada una de ellas listad qué partes (de las 4 anteriores) hay en la parte Cliente y cuáles en la parte Servidor.","31. Explicad brevemente qué es una Intranet y una extranet.","32. Explicad brevemente qué es una arquitectura de 3 niveles (3-tier), y cómo se aplicaría para una conectividad Web/Base de datos, a partir de las 4 partes de una aplicación vistas anteriormente.","33. Explicad brevemente qué es SQL y qué es una base de datos Relacional y una No Relacional (NoSQL).","34. Listad las órdenes (commands) principales de SQL, la estructura de las peticiones SQL, y algún ejemplo."]}}
+          
+          // AQUI PEGARAS LAS SIGUIENTES SESIONES (10 y 11)
+          
+        };
+
+        // Configuration
+        const FIRST_SESSION = 7;
+        const LAST_SESSION = 11; 
+        const DEFAULT_QUESTIONS = 12;
+
+        // State
+        let currentLanguage = 'catalan';
+        let sessionsData = {};
+        let currentExam = null;
+        let isDarkMode = true;
+
+        // DOM Elements
+        const languageSelect = document.getElementById('language-select');
+        const orderSelect = document.getElementById('order-select');
+        const numQuestionsInput = document.getElementById('num-questions');
+        const generateBtn = document.getElementById('generate-btn');
+        const downloadPdfBtn = document.getElementById('download-pdf-btn');
+        const examContainer = document.getElementById('exam-container');
+        const alertsContainer = document.getElementById('alerts-container');
+        const themeToggle = document.getElementById('theme-toggle');
+        const iconSun = document.getElementById('icon-sun');
+        const iconMoon = document.getElementById('icon-moon');
+
+        // UI Labels Elements
+        const dom = {
+            appTitle: document.getElementById('app-title'),
+            appSubtitle: document.getElementById('app-subtitle'),
+            lblLang: document.getElementById('lbl-lang'),
+            lblOrder: document.getElementById('lbl-order'),
+            lblNum: document.getElementById('lbl-num'),
+            optRandom: document.getElementById('opt-random'),
+            optSeq: document.getElementById('opt-seq'),
+            btnGen: document.getElementById('btn-gen-text'),
+            btnPdf: document.getElementById('btn-pdf-text'),
+            placeholder: document.getElementById('placeholder-text')
+        };
+
+        // === LOGIC ===
+
+        function init() {
+            loadSessionsData();
+            
+            // Listeners
+            languageSelect.addEventListener('change', (e) => {
+                currentLanguage = e.target.value;
+                updateInterfaceText();
+                loadSessionsData(); 
+                if (currentExam) {
+                    generateExam(); 
+                }
+            });
+
+            orderSelect.addEventListener('change', () => {
+                if (currentExam) {
+                    generateExam();
+                }
+            });
+            
+            numQuestionsInput.addEventListener('change', () => {
+                // Prevent invalid values
+                if (numQuestionsInput.value < 1) numQuestionsInput.value = 1;
+                if (numQuestionsInput.value > 100) numQuestionsInput.value = 100;
+            });
+
+            generateBtn.addEventListener('click', generateExam);
+            downloadPdfBtn.addEventListener('click', downloadPDF);
+            themeToggle.addEventListener('click', toggleTheme);
+            
+            // Initialize text
+            updateInterfaceText();
+        }
+
+        function toggleTheme() {
+            isDarkMode = !isDarkMode;
+            const html = document.documentElement;
+            
+            if (isDarkMode) {
+                html.classList.remove('light');
+                html.classList.add('dark');
+                iconMoon.style.display = 'block';
+                iconSun.style.display = 'none';
+            } else {
+                html.classList.remove('dark');
+                html.classList.add('light');
+                iconMoon.style.display = 'none';
+                iconSun.style.display = 'block';
+            }
+        }
+
+        function updateInterfaceText() {
+            const t = UI_TEXTS[currentLanguage];
+            
+            dom.appTitle.textContent = t.appTitle;
+            dom.appSubtitle.textContent = t.appSubtitle;
+            dom.lblLang.textContent = t.lblLang;
+            dom.lblOrder.textContent = t.lblOrder;
+            dom.lblNum.textContent = t.lblNum;
+            dom.optRandom.textContent = t.optRandom;
+            dom.optSeq.textContent = t.optSeq;
+            dom.btnPdf.textContent = t.btnPdf;
+            
+            if (!generateBtn.disabled) {
+                dom.btnGen.textContent = currentExam ? t.btnRegen : t.btnGen;
+            }
+
+            if (!currentExam) {
+                dom.placeholder.textContent = t.placeholder;
+            }
+        }
+
+        function loadSessionsData() {
+            const availableSessions = [];
+            const missingSessions = [];
+
+            // Reset alerts
+            alertsContainer.innerHTML = '';
+
+            for (let i = FIRST_SESSION; i <= LAST_SESSION; i++) {
+                const sessionNum = i.toString().padStart(2, '0');
+                if (SESSIONS_DATA[sessionNum]) {
+                    sessionsData[sessionNum] = SESSIONS_DATA[sessionNum];
+                    availableSessions.push(sessionNum);
+                } else {
+                    missingSessions.push(sessionNum);
+                }
+            }
+
+            if (missingSessions.length > 0) {
+                const alert = document.createElement('div');
+                alert.className = 'alert';
+                const icon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+                const msg = UI_TEXTS[currentLanguage].alertMissing;
+                alert.innerHTML = `${icon} <div><strong>${msg}</strong> S${missingSessions.join(', S')}</div>`;
+                alertsContainer.appendChild(alert);
+            }
+
+            return availableSessions;
+        }
+
+        function generateExam() {
+            generateBtn.disabled = true;
+            dom.btnGen.textContent = "...";
+            
+            const availableSessions = Object.keys(sessionsData).sort(); 
+            const requestedTotal = parseInt(numQuestionsInput.value) || DEFAULT_QUESTIONS;
+
+            // Determine how many "mandatory" per session we can afford
+            // Target is 2, but if user asks for very few, we drop to 1 or 0.
+            let mandatoryPerSession = 2;
+            if (requestedTotal < availableSessions.length * 2) {
+                mandatoryPerSession = 1;
+            }
+            if (requestedTotal < availableSessions.length) {
+                mandatoryPerSession = 0;
+            }
+
+            const mandatoryQs = [];
+            const extraQs = [];
+            const sessionUsage = {};
+
+            // 1. Mandatory questions
+            if (mandatoryPerSession > 0) {
+                availableSessions.forEach(sessionNum => {
+                    const sData = sessionsData[sessionNum];
+                    const questions = sData.questions[currentLanguage];
+                    const selected = getRandomQuestions(questions, mandatoryPerSession);
+                    
+                    selected.forEach(q => {
+                        mandatoryQs.push({ text: q, session: sessionNum, topic: sData.topic });
+                    });
+                    sessionUsage[sessionNum] = mandatoryPerSession;
+                });
+            }
+
+            // 2. Fill remainder
+            let remaining = requestedTotal - mandatoryQs.length;
+            let attempts = 0;
+            
+            if (remaining > 0) {
+                 while (remaining > 0 && attempts < 300) {
+                    attempts++;
+                    const randSession = availableSessions[Math.floor(Math.random() * availableSessions.length)];
+                    const sData = sessionsData[randSession];
+                    const questions = sData.questions[currentLanguage];
+                    
+                    const qText = questions[Math.floor(Math.random() * questions.length)];
+                    // Avoid duplicates
+                    const alreadyUsed = [...mandatoryQs, ...extraQs].some(q => q.text === qText);
+
+                    if (!alreadyUsed) {
+                        extraQs.push({ text: qText, session: randSession, topic: sData.topic });
+                        sessionUsage[randSession] = (sessionUsage[randSession] || 0) + 1;
+                        remaining--;
+                    }
+                }
+            }
+
+            // 3. Order Logic
+            const orderMode = orderSelect.value;
+            let finalQuestions = [];
+
+            if (orderMode === 'sequential') {
+                // Sort mandatory by session, then extras random (or sorted if strict)
+                // User asked: "first the two of each". So mandatory first.
+                finalQuestions = [...mandatoryQs, ...extraQs]; 
+            } else {
+                finalQuestions = shuffleArray([...mandatoryQs, ...extraQs]);
+            }
+
+            currentExam = {
+                questions: finalQuestions,
+                sessionUsage: sessionUsage
+            };
+            
+            renderExam(currentExam);
+            
+            generateBtn.disabled = false;
+            dom.btnGen.textContent = UI_TEXTS[currentLanguage].btnRegen;
+            downloadPdfBtn.disabled = false;
+        }
+
+        function renderExam(exam) {
+            examContainer.innerHTML = '';
+            const t = UI_TEXTS[currentLanguage];
+
+            // Header
+            const header = document.createElement('div');
+            header.className = 'paper-header';
+            const dateStr = new Date().toLocaleDateString(currentLanguage === 'catalan' ? 'ca-ES' : 'es-ES', { year:'numeric', month:'long', day:'numeric'});
+            header.innerHTML = `
+                <div class="paper-title">
+                    <h2>${t.examTitle}</h2>
+                </div>
+                <div class="paper-meta">
+                    ${dateStr} • ${exam.questions.length} Qs
+                </div>
+            `;
+            examContainer.appendChild(header);
+
+            // Questions
+            exam.questions.forEach((q, idx) => {
+                const card = document.createElement('div');
+                card.className = 'question-card';
+                card.style.animationDelay = `${idx * 0.05}s`;
+                
+                card.innerHTML = `
+                    <div class="q-meta">
+                        <span>Q${idx + 1}</span>
+                        <span class="q-tag">${t.sessionLbl} ${q.session}</span>
+                    </div>
+                    <div class="q-text">${q.text}</div>
+                `;
+                examContainer.appendChild(card);
+            });
+
+            // Summary
+            const summary = document.createElement('div');
+            summary.className = 'session-distribution';
+            let sumHTML = `<h3>${t.distTitle}</h3><ul>`;
+            
+            Object.keys(exam.sessionUsage).sort().forEach(s => {
+                const count = exam.sessionUsage[s];
+                const topic = sessionsData[s].topic;
+                sumHTML += `<li style="margin-bottom:4px; color:var(--text-secondary); font-size:0.9rem">
+                    <strong style="color:var(--text-primary)">S${s}:</strong> ${topic} (${count})
+                </li>`;
+            });
+            sumHTML += '</ul>';
+            summary.innerHTML = sumHTML;
+            examContainer.appendChild(summary);
+        }
+
+        function getRandomQuestions(arr, n) {
+            const shuffled = [...arr].sort(() => 0.5 - Math.random());
+            return shuffled.slice(0, n);
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function downloadPDF() {
+            if (!currentExam) return;
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const t = UI_TEXTS[currentLanguage];
+            
+            const margin = 20;
+            const pageW = doc.internal.pageSize.getWidth();
+            const maxW = pageW - (margin * 2);
+            let y = 25;
+
+            // Title
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(22);
+            doc.text(t.appTitle, margin, y);
+            
+            y += 10;
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            const dateStr = new Date().toLocaleDateString(currentLanguage === 'catalan' ? 'ca-ES' : 'es-ES', { year:'numeric', month:'long', day:'numeric'});
+            doc.text(`${t.appSubtitle} | ${dateStr}`, margin, y);
+            
+            y += 20;
+
+            // Questions
+            currentExam.questions.forEach((q, idx) => {
+                if (y > 260) { doc.addPage(); y = 20; }
+
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(10);
+                doc.setTextColor(59, 130, 246); 
+                doc.text(`Q${idx+1} [${t.sessionLbl} ${q.session}]`, margin, y);
+                
+                y += 5;
+                doc.setFont("times", "roman");
+                doc.setFontSize(12);
+                doc.setTextColor(0);
+                
+                const splitText = doc.splitTextToSize(q.text, maxW);
+                doc.text(splitText, margin, y);
+                y += (splitText.length * 6) + 12;
+            });
+
+            doc.save('Examen_UAB.pdf');
+        }
+
+        // Start
+        init();
+    </script>
+</body>
+</html>
